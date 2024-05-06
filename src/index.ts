@@ -1,10 +1,14 @@
-const { Client} = require('pg');
+const { Client } = require("pg");
 
 const client = new Client({
-  connectionString: "postgresql://postgres:mysecretpassword@localhost:5432/postgres?sslmode=disable"
-})
+  host: "localhost",
+  port: 5432,
+  database: "postgres",
+  user: "postgres",
+  password: "mysecretpassword",
+});
 
-async function createUsersTable(){
+async function createUsersTable() {
   await client.connect();
   const result = await client.query(`
         CREATE TABLE users (
@@ -14,22 +18,61 @@ async function createUsersTable(){
             password VARCHAR(255) NOT NULL,
             created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         );
-    `)
+    `);
+  console.log(result);
 }
 
-async function insertData (){
-  try{
-    await client.connect()
-    const insertQuery = "INSERT INTO users (username, email,password) VALUES ('shivank','shivank@gmail.com','password')"
-    const res = await client.query(insertQuery)
-    console.log('insertion sucess:', res);
+async function insertData(username: string, email: string, password: string) {
+  const client = new Client({
+    host: "localhost",
+    port: 5432,
+    database: "postgres",
+    user: "postgres",
+    password: "mysecretpassword",
+  });
+
+  try {
+    await client.connect(); // Ensure client connection is established
+    // Use parameterized query to prevent SQL injection
+    const insertQuery =
+      "INSERT INTO users (username, email, password) VALUES ($1, $2, $3)";
+    const values = [username, email, password];
+    const res = await client.query(insertQuery, values);
+    console.log("Insertion success:", res); // Output insertion result
+  } catch (err) {
+    console.error("Error during the insertion:", err);
+  } finally {
+    await client.end(); // Close the client connection
   }
-  catch(err){;
-    console.error(err)
-  }
-  finally{
+}
+
+async function getUser(email: string) {
+  const client = new Client({
+    host: "localhost",
+    port: 5432,
+    database: "postgres",
+    user: "postgres",
+    password: "mysecretpassword",
+  });
+  try {
+    await client.connect();
+    const query = "SELECT * FROM users WHERE email = $1";
+    const values = [email];
+    const result = await client.query(query, values);
+
+    if (result.rows.length > 0) {
+      console.log("User found:", result.rows[0]);
+      return result.rows[0];
+    } else {
+      console.log("No User found with the given email.");
+      return null;
+    }
+  } catch (err) {
+    console.log("Error during fetching user:", err);
+    throw err;
+  } finally {
     await client.end();
   }
 }
 
-createUsersTable()
+getUser('user5@example.com').catch(console.error);
